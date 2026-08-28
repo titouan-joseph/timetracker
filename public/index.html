@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Tracker - Suivi du temps de travail</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>⏰ Time Tracker</h1>
+
+        <div class="main-section">
+            <div class="timer-display" id="todayTotal">
+                Temps aujourd'hui: <span id="todayTime">00:00:00</span>
+            </div>
+
+            <button class="toggle-button" id="toggleButton">
+                <span id="buttonText">Démarrer</span>
+            </button>
+
+            <div class="status-indicator" id="statusIndicator">
+                Statut: <span id="statusText">Arrêté</span>
+            </div>
+        </div>
+
+        <div class="history-section">
+            <h2>📊 Historique (7 derniers jours)</h2>
+            <div class="history-grid" id="historyGrid">
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
