@@ -10,6 +10,7 @@ const statusIndicator = document.getElementById('statusIndicator');
 let isRunning = false;
 let currentSessionStart = null;
 let updateInterval = null;
+let initialTodaySeconds = 0;
 
 // Day names for history display
 const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
@@ -91,7 +92,16 @@ async function checkActiveSession() {
             isRunning = true;
             currentSessionStart = new Date(data.session.start_time);
             updateButtonState();
-            startLiveUpdate();
+            // Get initial today time before starting live update
+            fetch('/api/sessions/today')
+                .then(response => response.json())
+                .then(todayData => {
+                    initialTodaySeconds = todayData.totalSeconds;
+                    startLiveUpdate();
+                })
+                .catch(error => {
+                    console.error('Error getting initial today time:', error);
+                });
         }
     } catch (error) {
         console.error('Error checking active session:', error);
@@ -102,19 +112,12 @@ async function checkActiveSession() {
 function startLiveUpdate() {
     if (updateInterval) clearInterval(updateInterval);
 
-    updateInterval = setInterval(async () => {
+    updateInterval = setInterval(() => {
         if (isRunning && currentSessionStart) {
             const now = new Date();
             const elapsed = Math.floor((now - currentSessionStart) / 1000);
-
-            try {
-                const response = await fetch('/api/sessions/today');
-                const data = await response.json();
-                const total = data.totalSeconds + elapsed;
-                todayTime.textContent = formatTime(total);
-            } catch (error) {
-                console.error('Error in live update:', error);
-            }
+            const total = initialTodaySeconds + elapsed;
+            todayTime.textContent = formatTime(total);
         }
     }, 1000);
 }
@@ -154,7 +157,11 @@ async function toggleSession() {
                 isRunning = false;
                 currentSessionStart = null;
                 updateButtonState();
-                updateTodayTime();
+                // Refresh initial data for live update
+                const todayResponse = await fetch('/api/sessions/today');
+                const todayData = await todayResponse.json();
+                initialTodaySeconds = todayData.totalSeconds;
+                todayTime.textContent = formatTime(todayData.totalSeconds);
                 updateWeekTotal();
                 updateHistory();
                 updateChart();
@@ -175,6 +182,10 @@ async function toggleSession() {
                 isRunning = true;
                 currentSessionStart = new Date();
                 updateButtonState();
+                // Get initial today time for live update
+                const todayResponse = await fetch('/api/sessions/today');
+                const todayData = await todayResponse.json();
+                initialTodaySeconds = todayData.totalSeconds;
                 startLiveUpdate();
             }
         } catch (error) {
