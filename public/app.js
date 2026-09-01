@@ -13,6 +13,11 @@ let updateInterval = null;
 
 // Day names for history display
 const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+const weekTime = document.getElementById('weekTime');
+let weeklyChart = null;  // Pour le graphique
+
+// Ajoutez aussi ces tableaux (si pas déjà présents)
+const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
 
 // Format seconds to HH:MM:SS
 function formatTime(seconds) {
@@ -150,7 +155,9 @@ async function toggleSession() {
                 currentSessionStart = null;
                 updateButtonState();
                 updateTodayTime();
+                updateWeekTotal();
                 updateHistory();
+                updateChart();
             }
         } catch (error) {
             console.error('Error ending session:', error);
@@ -176,21 +183,157 @@ async function toggleSession() {
     }
 }
 
+// Format seconds to hours (decimal) - pour le graphique
+function formatHours(seconds) {
+    return (seconds / 3600).toFixed(1);
+}
+
+// Format week range (ex: "15-21 Jan")
+function formatWeekRange(mondayStr, sundayStr) {
+    const monday = new Date(mondayStr + 'T00:00:00');
+    const sunday = new Date(sundayStr + 'T00:00:00');
+    
+    const mondayDay = monday.getDate();
+    const sundayDay = sunday.getDate();
+    const month = monthNames[monday.getMonth()];
+    
+    return `${mondayDay}-${sundayDay} ${month}`;
+}
+
+// Update week total display
+async function updateWeekTotal() {
+    try {
+        const response = await fetch('/api/sessions/week-total');
+        const data = await response.json();
+        weekTime.textContent = formatTime(data.totalSeconds);
+    } catch (error) {
+        console.error('Error updating week total:', error);
+    }
+}
+
+// Update chart with weekly history
+async function updateChart() {
+    try {
+        const response = await fetch('/api/sessions/weekly-history');
+        const data = await response.json();
+
+        const ctx = document.getElementById('weeklyChart').getContext('2d');
+
+        // Destroy previous chart if it exists
+        if (weeklyChart) {
+            weeklyChart.destroy();
+        }
+
+        const labels = data.weeklyData.map(week => formatWeekRange(week.monday, week.sunday));
+        const times = data.weeklyData.map(week => formatHours(week.totalSeconds));
+
+        weeklyChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Heures travaillées',
+                    data: times,
+                    backgroundColor: [
+                        'rgba(102, 126, 234, 0.7)',
+                        'rgba(118, 75, 162, 0.7)',
+                        'rgba(255, 107, 107, 0.7)',
+                        'rgba(238, 90, 36, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(102, 126, 234, 1)',
+                        'rgba(118, 75, 162, 1)',
+                        'rgba(255, 107, 107, 1)',
+                        'rgba(238, 90, 36, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Heures'
+                        },
+                        // Masquer les valeurs de l'axe Y pour éviter la redondance
+                        ticks: {
+                            display: false
+                        },
+                        grid: {
+                            display: true
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Semaines'
+                        }
+                    }
+                },
+            plugins: {
+                datalabels: {
+                    display: true,
+                    anchor: 'center',       // Centre le label dans la barre
+                    align: 'center',        // Alignement centré
+                    formatter: function(value) {
+                        const hours = parseFloat(value);
+                        const totalSeconds = Math.round(hours * 3600);
+                        return formatTime(totalSeconds);
+                    },
+                    color: '#fff',           // Blanc pour mieux contraster
+                    font: {
+                        weight: 'bold',
+                        size: 12             // Légèrement plus petit
+                    },
+                    padding: 2,
+                    // Afficher seulement si la barre est assez haute
+                    display: function(context) {
+                        return context.dataset.data[context.dataIndex] > 0.5; // Affiche si > 0.5h
+                    }
+                },
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const hours = parseFloat(context.parsed.y);
+                            const totalSeconds = Math.round(hours * 3600);
+                            return `Temps: ${formatTime(totalSeconds)}`;
+                        }
+                    }
+                }
+            }
+            },
+            plugins: [ChartDataLabels] // Active le plugin
+        });
+    } catch (error) {
+        console.error('Error updating chart:', error);
+    }
+}
+
 // Event listeners
 toggleButton.addEventListener('click', toggleSession);
 
 // Initialize the app
 async function init() {
     await updateTodayTime();
+    await updateWeekTotal();
     await updateHistory();
     await checkActiveSession();
+    await updateChart();
 }
-
 // Start the app
 init();
 
 // Update every minute to keep history fresh
 setInterval(() => {
     updateTodayTime();
+    updateWeekTotal();
     updateHistory();
+    updateChart();
 }, 60000);

@@ -171,3 +171,55 @@ h1 {
         grid-template-columns: 1fr;
     }
 }
+
+.chart-section {
+    margin-top: 40px;
+    background: #f8f9fa;
+    border-radius: 15px;
+    padding: 25px;
+}
+
+.chart-section h2 {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+    text-align: center;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+/* Modifiez aussi le timer-display existant */
+.timer-display {
+    font-size: 1.3rem;  /* au lieu de 1.5rem */
+    color: #555;
+    margin-bottom: 15px;  /* au lieu de 30px */
+}
+
+#todayTime, #weekTime {
+    font-weight: bold;
+    color: #667eea;
+    font-size: 1.8rem;  /* au lieu de 2rem pour todayTime */
+}
+
+/* Pour mobile */
+@media (max-width: 768px) {
+    .chart-container {
+        height: 250px;
+    }
+    .history-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .chart-container {
+        height: 200px;
+    }
+    .history-grid {
+        grid-template-columns: 1fr;
+    }
+}

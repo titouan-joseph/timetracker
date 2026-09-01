@@ -165,6 +165,84 @@ app.get('/api/sessions/active', (req, res) => {
   );
 });
 
+// Get current week total (Monday to Sunday)
+app.get('/api/sessions/week-total', (req, res) => {
+  const today = new Date();
+
+  // Find Monday of current week
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
+
+  // Find Sunday of current week
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  const mondayStr = monday.toISOString().split('T')[0];
+  const sundayStr = sunday.toISOString().split('T')[0];
+
+  db.all(
+    'SELECT SUM(duration) as totalSeconds FROM sessions WHERE date BETWEEN ? AND ?',
+    [mondayStr, sundayStr],
+    (err, rows) => {
+      if (err) {
+        console.error('Error fetching week total:', err.message);
+        return res.status(500).json({ error: 'Failed to fetch week total' });
+      }
+
+      const totalSeconds = rows[0]?.totalSeconds || 0;
+      res.json({ totalSeconds, startDate: mondayStr, endDate: sundayStr });
+    }
+  );
+});
+
+// Get weekly data for the last 4 weeks
+app.get('/api/sessions/weekly-history', (req, res) => {
+  const today = new Date();
+  const weeks = [];
+
+  // Get the last 4 weeks (Monday to Sunday)
+  for (let i = 0; i < 4; i++) {
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - today.getDay() - (i * 7) + (today.getDay() === 0 ? -6 : 1));
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    weeks.push({
+      monday: monday.toISOString().split('T')[0],
+      sunday: sunday.toISOString().split('T')[0],
+      weekNumber: i
+    });
+  }
+
+  // Reverse to get oldest first
+  weeks.reverse();
+
+  const results = [];
+  let completed = 0;
+
+  weeks.forEach((week, index) => {
+    db.get(
+      'SELECT SUM(duration) as totalSeconds FROM sessions WHERE date BETWEEN ? AND ?',
+      [week.monday, week.sunday],
+      (err, row) => {
+        if (err) {
+          console.error('Error fetching weekly data:', err.message);
+          results[index] = { ...week, totalSeconds: 0 };
+        } else {
+          results[index] = { ...week, totalSeconds: row?.totalSeconds || 0 };
+        }
+
+        completed++;
+        if (completed === weeks.length) {
+          // Sort by date (oldest first)
+          results.sort((a, b) => new Date(a.monday) - new Date(b.monday));
+          res.json({ weeklyData: results });
+        }
+      }
+    );
+  });
+});
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

@@ -3,16 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Time Tracker - Suivi du temps de travail</title>
+    <title>Time Tracker</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 </head>
 <body>
     <div class="container">
         <h1>⏰ Time Tracker</h1>
 
+        
         <div class="main-section">
+            <div>
+                <p>Objectif :</p>
+                <p>7h42min / jour</p>
+                <p>38h30 / semaine</p>
+            </div>
             <div class="timer-display" id="todayTotal">
                 Temps aujourd'hui: <span id="todayTime">00:00:00</span>
+            </div>
+
+            <div class="timer-display" id="weekTotal">
+                Temps cette semaine (Lun-Dim): <span id="weekTime">00:00:00</span>
             </div>
 
             <button class="toggle-button" id="toggleButton">
@@ -24,10 +36,16 @@
             </div>
         </div>
 
+        <div class="chart-section">
+            <h2>📈 Historique sur 4 semaines</h2>
+            <div class="chart-container">
+                <canvas id="weeklyChart"></canvas>
+            </div>
+        </div>
+
         <div class="history-section">
             <h2>📊 Historique (7 derniers jours)</h2>
-            <div class="history-grid" id="historyGrid">
-            </div>
+            <div class="history-grid" id="historyGrid"></div>
         </div>
     </div>
 
