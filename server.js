@@ -254,8 +254,8 @@ app.get('/api/sessions/weekly-history', (req, res) => {
   const today = new Date();
   const weeks = [];
 
-  // Get the last 4 weeks (Monday to Sunday)
-  for (let i = 0; i < 4; i++) {
+  // Get the last 4 weeks (Monday to Sunday) - oldest to newest
+  for (let i = 3; i >= 0; i--) {
     const weekRange = getWeekRange(-i);
     weeks.push({
       monday: weekRange.monday,
@@ -263,9 +263,6 @@ app.get('/api/sessions/weekly-history', (req, res) => {
       weekNumber: i
     });
   }
-
-  // Reverse to get oldest first
-  weeks.reverse();
 
   const results = [];
   let completed = 0;
@@ -284,8 +281,6 @@ app.get('/api/sessions/weekly-history', (req, res) => {
 
         completed++;
         if (completed === weeks.length) {
-          // Sort by date (oldest first)
-          results.sort((a, b) => new Date(a.monday) - new Date(b.monday));
           res.json({ weeklyData: results });
         }
       }
