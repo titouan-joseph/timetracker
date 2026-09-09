@@ -165,32 +165,86 @@ app.get('/api/sessions/active', (req, res) => {
   );
 });
 
-// Get current week total (Monday to Sunday)
-app.get('/api/sessions/week-total', (req, res) => {
+// Helper function to get week range (Monday to Sunday)
+function getWeekRange(offsetWeeks = 0) {
   const today = new Date();
-
-  // Find Monday of current week
   const monday = new Date(today);
-  monday.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
-
-  // Find Sunday of current week
+  monday.setDate(today.getDate() - today.getDay() - (offsetWeeks * 7) + (today.getDay() === 0 ? -6 : 1));
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
+  return {
+    monday: monday.toISOString().split('T')[0],
+    sunday: sunday.toISOString().split('T')[0]
+  };
+}
 
-  const mondayStr = monday.toISOString().split('T')[0];
-  const sundayStr = sunday.toISOString().split('T')[0];
+// Get current week total (Monday to Sunday) with carry-over from previous week
+app.get('/api/sessions/week-total', (req, res) => {
+  const currentWeek = getWeekRange(0);
+  const previousWeek = getWeekRange(-1);
 
-  db.all(
+  const WEEKLY_TARGET = 38 * 3600 + 30 * 60; // 38h30 = 138600 seconds
+
+  // Get current week total
+  db.get(
     'SELECT SUM(duration) as totalSeconds FROM sessions WHERE date BETWEEN ? AND ?',
-    [mondayStr, sundayStr],
-    (err, rows) => {
+    [currentWeek.monday, currentWeek.sunday],
+    (err, currentRow) => {
       if (err) {
-        console.error('Error fetching week total:', err.message);
+        console.error('Error fetching current week total:', err.message);
         return res.status(500).json({ error: 'Failed to fetch week total' });
       }
 
-      const totalSeconds = rows[0]?.totalSeconds || 0;
-      res.json({ totalSeconds, startDate: mondayStr, endDate: sundayStr });
+      const currentTotal = currentRow?.totalSeconds || 0;
+
+      // Get previous week total to calculate overflow
+      db.get(
+        'SELECT SUM(duration) as totalSeconds FROM sessions WHERE date BETWEEN ? AND ?',
+        [previousWeek.monday, previousWeek.sunday],
+        (err, previousRow) => {
+          if (err) {
+            console.error('Error fetching previous week total:', err.message);
+            return res.status(500).json({ error: 'Failed to fetch previous week total' });
+          }
+
+          const previousTotal = previousRow?.totalSeconds || 0;
+          const overflowFromPrevious = Math.max(0, previousTotal - WEEKLY_TARGET);
+          const totalWithCarryOver = currentTotal + overflowFromPrevious;
+
+          res.json({
+            totalSeconds: totalWithCarryOver,
+            currentWeekSeconds: currentTotal,
+            overflowFromPrevious: overflowFromPrevious,
+            startDate: currentWeek.monday,
+            endDate: currentWeek.sunday
+          });
+        }
+      );
+    }
+  );
+});
+
+// Get week overflow (how much time was exceeded)
+app.get('/api/sessions/week-overflow', (req, res) => {
+  const WEEKLY_TARGET = 38 * 3600 + 30 * 60; // 38h30 = 138600 seconds
+  const currentWeek = getWeekRange(0);
+
+  db.get(
+    'SELECT SUM(duration) as totalSeconds FROM sessions WHERE date BETWEEN ? AND ?',
+    [currentWeek.monday, currentWeek.sunday],
+    (err, row) => {
+      if (err) {
+        console.error('Error fetching week overflow:', err.message);
+        return res.status(500).json({ error: 'Failed to fetch week overflow' });
+      }
+
+      const totalSeconds = row?.totalSeconds || 0;
+      const overflow = Math.max(0, totalSeconds - WEEKLY_TARGET);
+      
+      res.json({ 
+        overflowSeconds: overflow,
+        isOver: totalSeconds > WEEKLY_TARGET
+      });
     }
   );
 });
@@ -202,14 +256,10 @@ app.get('/api/sessions/weekly-history', (req, res) => {
 
   // Get the last 4 weeks (Monday to Sunday)
   for (let i = 0; i < 4; i++) {
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - today.getDay() - (i * 7) + (today.getDay() === 0 ? -6 : 1));
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-
+    const weekRange = getWeekRange(-i);
     weeks.push({
-      monday: monday.toISOString().split('T')[0],
-      sunday: sunday.toISOString().split('T')[0],
+      monday: weekRange.monday,
+      sunday: weekRange.sunday,
       weekNumber: i
     });
   }

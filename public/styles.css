@@ -317,6 +317,22 @@ h1 {
     color: #333;
 }
 
+/* Overflow indicator */
+.overflow-indicator {
+    margin-left: 10px;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #ff6b6b;
+}
+
+.overflow-indicator.positive {
+    color: #4CAF50;
+}
+
+.overflow-indicator:empty {
+    display: none;
+}
+
 /* Pour mobile */
 @media (max-width: 768px) {
     .chart-container {

@@ -9,8 +9,7 @@ const todayProgressBar = document.getElementById('todayProgressBar');
 const todayProgressText = document.getElementById('todayProgressText');
 const weekProgressBar = document.getElementById('weekProgressBar');
 const weekProgressText = document.getElementById('weekProgressText');
-const dayObjective = document.getElementById('dayObjective');
-const weekObjective = document.getElementById('weekObjective');
+const weekOverflow = document.getElementById('weekOverflow');
 
 // State
 let isRunning = false;
@@ -135,7 +134,8 @@ async function checkActiveSession() {
                 fetch('/api/sessions/week-total').then(r => r.json())
             ]).then(([todayData, weekData]) => {
                 initialTodaySeconds = todayData.totalSeconds;
-                initialWeekSeconds = weekData.totalSeconds;
+                initialWeekSeconds = weekData.currentWeekSeconds;
+                updateWeekOverflow(weekData.overflowFromPrevious);
                 startLiveUpdate();
             }).catch(error => {
                 console.error('Error getting initial times:', error);
@@ -160,6 +160,7 @@ function startLiveUpdate() {
             updateTodayProgress(totalToday);
             weekTime.textContent = formatTime(totalWeek);
             updateWeekProgress(totalWeek);
+            // Overflow stays the same during live update (it's from previous week)
         }
     }, 1000);
 }
@@ -205,11 +206,12 @@ async function toggleSession() {
                 const weekResponse = await fetch('/api/sessions/week-total');
                 const weekData = await weekResponse.json();
                 initialTodaySeconds = todayData.totalSeconds;
-                initialWeekSeconds = weekData.totalSeconds;
+                initialWeekSeconds = weekData.currentWeekSeconds;
                 todayTime.textContent = formatTime(todayData.totalSeconds);
                 weekTime.textContent = formatTime(weekData.totalSeconds);
                 updateTodayProgress(todayData.totalSeconds);
                 updateWeekProgress(weekData.totalSeconds);
+                updateWeekOverflow(weekData.overflowFromPrevious);
                 updateHistory();
                 updateChart();
             }
@@ -235,9 +237,10 @@ async function toggleSession() {
                 const weekResponse = await fetch('/api/sessions/week-total');
                 const weekData = await weekResponse.json();
                 initialTodaySeconds = todayData.totalSeconds;
-                initialWeekSeconds = weekData.totalSeconds;
+                initialWeekSeconds = weekData.currentWeekSeconds;
                 updateTodayProgress(initialTodaySeconds);
-                updateWeekProgress(initialWeekSeconds);
+                updateWeekProgress(weekData.totalSeconds);
+                updateWeekOverflow(weekData.overflowFromPrevious);
                 startLiveUpdate();
             }
         } catch (error) {
@@ -263,6 +266,19 @@ function formatWeekRange(mondayStr, sundayStr) {
     return `${mondayDay}-${sundayDay} ${month}`;
 }
 
+// Update week overflow indicator
+function updateWeekOverflow(overflowSeconds) {
+    if (overflowSeconds > 0) {
+        weekOverflow.textContent = ` (+${formatTime(overflowSeconds)})`;
+        weekOverflow.className = 'overflow-indicator';
+    } else if (overflowSeconds < 0) {
+        weekOverflow.textContent = ` (${formatTime(Math.abs(overflowSeconds))})`;
+        weekOverflow.className = 'overflow-indicator positive';
+    } else {
+        weekOverflow.textContent = '';
+    }
+}
+
 // Update week total display and progress bar
 async function updateWeekTotal() {
     try {
@@ -270,6 +286,7 @@ async function updateWeekTotal() {
         const data = await response.json();
         weekTime.textContent = formatTime(data.totalSeconds);
         updateWeekProgress(data.totalSeconds);
+        updateWeekOverflow(data.overflowFromPrevious);
     } catch (error) {
         console.error('Error updating week total:', error);
     }
