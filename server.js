@@ -168,8 +168,12 @@ app.get('/api/sessions/active', (req, res) => {
 // Helper function to get week range (Monday to Sunday)
 function getWeekRange(offsetWeeks = 0) {
   const today = new Date();
+  // Calculate Monday of current week
   const monday = new Date(today);
-  monday.setDate(today.getDate() - today.getDay() - (offsetWeeks * 7) + (today.getDay() === 0 ? -6 : 1));
+  const dayOfWeek = today.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+  // Go back to Monday: if Sunday (0), go back 6 days; otherwise go back (dayOfWeek - 1) days
+  const daysToMonday = dayOfWeek === 0 ? -6 : -(dayOfWeek - 1);
+  monday.setDate(today.getDate() + daysToMonday + (offsetWeeks * 7));
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
   return {
