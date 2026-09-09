@@ -94,11 +94,20 @@ async function updateHistory() {
             const date = formatDate(item.date);
             const dayName = getDayName(item.date);
             const time = formatTime(item.totalSeconds);
+            const percentage = (item.totalSeconds / DAILY_TARGET) * 100;
+            const progressClass = item.totalSeconds > DAILY_TARGET ? 'warning' : '';
+            const displayPercentage = Math.min(percentage, 100);
 
             historyItem.innerHTML = `
                 <div class="date">${date}</div>
                 <div class="time">${time}</div>
                 <div class="day-name">${dayName}</div>
+                <div class="history-progress-container">
+                    <div class="history-progress-bar-wrapper">
+                        <div class="history-progress-bar ${progressClass}" style="width: ${Math.min(percentage, 100)}%"></div>
+                        <div class="history-progress-text ${progressClass}">${Math.round(displayPercentage)}%</div>
+                    </div>
+                </div>
             `;
 
             historyGrid.appendChild(historyItem);
