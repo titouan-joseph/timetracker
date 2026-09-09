@@ -293,7 +293,7 @@ async function updateChart() {
         }
 
         const labels = data.weeklyData.map(week => formatWeekRange(week.monday, week.sunday));
-        const times = data.weeklyData.map(week => formatHours(week.totalSeconds));
+        const times = data.weeklyData.map(week => week.totalSeconds);
 
         weeklyChart = new Chart(ctx, {
             type: 'bar',
@@ -329,7 +329,11 @@ async function updateChart() {
                         },
                         // Masquer les valeurs de l'axe Y pour éviter la redondance
                         ticks: {
-                            display: false
+                            callback: function(value) {
+                                const hours = Math.floor(value / 3600);
+                                const minutes = Math.floor((value % 3600) / 60);
+                                return `${hours}h${minutes > 0 ? minutes : ''}`;
+                            }
                         },
                         grid: {
                             display: true
@@ -348,19 +352,17 @@ async function updateChart() {
                     anchor: 'center',       // Centre le label dans la barre
                     align: 'center',        // Alignement centré
                     formatter: function(value) {
-                        const hours = parseFloat(value);
-                        const totalSeconds = Math.round(hours * 3600);
-                        return formatTime(totalSeconds);
+                        return formatTime(value);
                     },
                     color: '#fff',           // Blanc pour mieux contraster
                     font: {
                         weight: 'bold',
-                        size: 12             // Légèrement plus petit
+                        size: 11
                     },
                     padding: 2,
                     // Afficher seulement si la barre est assez haute
                     display: function(context) {
-                        return context.dataset.data[context.dataIndex] > 0.5; // Affiche si > 0.5h
+                        return context.dataset.data[context.dataIndex] > 1800; // Affiche si > 30min
                     }
                 },
                 legend: {
@@ -369,9 +371,7 @@ async function updateChart() {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            const hours = parseFloat(context.parsed.y);
-                            const totalSeconds = Math.round(hours * 3600);
-                            return `Temps: ${formatTime(totalSeconds)}`;
+                            return `Temps: ${formatTime(context.parsed.y)}`;
                         }
                     }
                 }
