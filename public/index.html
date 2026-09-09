@@ -14,17 +14,35 @@
 
         
         <div class="main-section">
-            <div>
+            <div class="objectives">
                 <p>Objectif :</p>
                 <p>7h42min / jour</p>
                 <p>38h30 / semaine</p>
             </div>
-            <div class="timer-display" id="todayTotal">
-                Temps aujourd'hui: <span id="todayTime">00:00:00</span>
+            <div class="progress-container">
+                <div class="timer-display" id="todayTotal">
+                    Temps aujourd'hui: <span id="todayTime">00:00:00</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-label">Progression journée</div>
+                    <div class="progress-bar-wrapper">
+                        <div class="progress-bar" id="todayProgressBar"></div>
+                        <div class="progress-text" id="todayProgressText">0%</div>
+                    </div>
+                </div>
             </div>
 
-            <div class="timer-display" id="weekTotal">
-                Temps cette semaine (Lun-Dim): <span id="weekTime">00:00:00</span>
+            <div class="progress-container">
+                <div class="timer-display" id="weekTotal">
+                    Temps cette semaine (Lun-Dim): <span id="weekTime">00:00:00</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-label">Progression semaine</div>
+                    <div class="progress-bar-wrapper">
+                        <div class="progress-bar" id="weekProgressBar"></div>
+                        <div class="progress-text" id="weekProgressText">0%</div>
+                    </div>
+                </div>
             </div>
 
             <button class="toggle-button" id="toggleButton">

@@ -5,12 +5,20 @@ const statusText = document.getElementById('statusText');
 const todayTime = document.getElementById('todayTime');
 const historyGrid = document.getElementById('historyGrid');
 const statusIndicator = document.getElementById('statusIndicator');
+const todayProgressBar = document.getElementById('todayProgressBar');
+const todayProgressText = document.getElementById('todayProgressText');
+const weekProgressBar = document.getElementById('weekProgressBar');
+const weekProgressText = document.getElementById('weekProgressText');
 
 // State
 let isRunning = false;
 let currentSessionStart = null;
 let updateInterval = null;
 let initialTodaySeconds = 0;
+
+// Daily and weekly targets in seconds
+const DAILY_TARGET = 7 * 3600 + 42 * 60; // 7h42min = 27840 seconds
+const WEEKLY_TARGET = 38 * 3600 + 30 * 60; // 38h30 = 138600 seconds
 
 // Day names for history display
 const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
@@ -42,14 +50,32 @@ function getDayName(dateStr) {
     return dayNames[date.getDay()];
 }
 
-// Update today's time display
+// Update today's time display and progress bar
 async function updateTodayTime() {
     try {
         const response = await fetch('/api/sessions/today');
         const data = await response.json();
         todayTime.textContent = formatTime(data.totalSeconds);
+        updateTodayProgress(data.totalSeconds);
     } catch (error) {
         console.error('Error updating today time:', error);
+    }
+}
+
+// Update today's progress bar
+function updateTodayProgress(todaySeconds) {
+    const percentage = (todaySeconds / DAILY_TARGET) * 100;
+    todayProgressBar.style.width = `${Math.min(percentage, 100)}%`;
+    todayProgressText.textContent = `${Math.round(Math.min(percentage, 100))}%`;
+    
+    // Apply warning style if exceeded
+    if (todaySeconds > DAILY_TARGET) {
+        todayProgressBar.classList.add('warning');
+        todayProgressText.classList.add('warning');
+        todayProgressText.textContent = `${Math.round(percentage)}%`;
+    } else {
+        todayProgressBar.classList.remove('warning');
+        todayProgressText.classList.remove('warning');
     }
 }
 
@@ -118,6 +144,8 @@ function startLiveUpdate() {
             const elapsed = Math.floor((now - currentSessionStart) / 1000);
             const total = initialTodaySeconds + elapsed;
             todayTime.textContent = formatTime(total);
+            updateTodayProgress(total);
+            updateWeekTotal();
         }
     }, 1000);
 }
@@ -162,6 +190,7 @@ async function toggleSession() {
                 const todayData = await todayResponse.json();
                 initialTodaySeconds = todayData.totalSeconds;
                 todayTime.textContent = formatTime(todayData.totalSeconds);
+                updateTodayProgress(todayData.totalSeconds);
                 updateWeekTotal();
                 updateHistory();
                 updateChart();
@@ -186,6 +215,7 @@ async function toggleSession() {
                 const todayResponse = await fetch('/api/sessions/today');
                 const todayData = await todayResponse.json();
                 initialTodaySeconds = todayData.totalSeconds;
+                updateTodayProgress(initialTodaySeconds);
                 startLiveUpdate();
             }
         } catch (error) {
@@ -211,14 +241,32 @@ function formatWeekRange(mondayStr, sundayStr) {
     return `${mondayDay}-${sundayDay} ${month}`;
 }
 
-// Update week total display
+// Update week total display and progress bar
 async function updateWeekTotal() {
     try {
         const response = await fetch('/api/sessions/week-total');
         const data = await response.json();
         weekTime.textContent = formatTime(data.totalSeconds);
+        updateWeekProgress(data.totalSeconds);
     } catch (error) {
         console.error('Error updating week total:', error);
+    }
+}
+
+// Update week's progress bar
+function updateWeekProgress(weekSeconds) {
+    const percentage = (weekSeconds / WEEKLY_TARGET) * 100;
+    weekProgressBar.style.width = `${Math.min(percentage, 100)}%`;
+    weekProgressText.textContent = `${Math.round(Math.min(percentage, 100))}%`;
+    
+    // Apply warning style if exceeded
+    if (weekSeconds > WEEKLY_TARGET) {
+        weekProgressBar.classList.add('warning');
+        weekProgressText.classList.add('warning');
+        weekProgressText.textContent = `${Math.round(percentage)}%`;
+    } else {
+        weekProgressBar.classList.remove('warning');
+        weekProgressText.classList.remove('warning');
     }
 }
 
@@ -340,6 +388,8 @@ async function init() {
 }
 // Start the app
 init();
+
+
 
 // Update every minute to keep history fresh
 setInterval(() => {
