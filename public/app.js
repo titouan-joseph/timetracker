@@ -9,6 +9,8 @@ const todayProgressBar = document.getElementById('todayProgressBar');
 const todayProgressText = document.getElementById('todayProgressText');
 const weekProgressBar = document.getElementById('weekProgressBar');
 const weekProgressText = document.getElementById('weekProgressText');
+const dayObjective = document.getElementById('dayObjective');
+const weekObjective = document.getElementById('weekObjective');
 
 // State
 let isRunning = false;
@@ -406,6 +408,8 @@ async function init() {
     await updateHistory();
     await checkActiveSession();
     await updateChart();
+    dayObjective.textContent = formatTime(DAILY_TARGET);
+    weekObjective.textContent = formatTime(WEEKLY_TARGET);
 }
 // Start the app
 init();
