@@ -15,6 +15,7 @@ let isRunning = false;
 let currentSessionStart = null;
 let updateInterval = null;
 let initialTodaySeconds = 0;
+let initialWeekSeconds = 0;
 
 // Daily and weekly targets in seconds
 const DAILY_TARGET = 7 * 3600 + 42 * 60; // 7h42min = 27840 seconds
@@ -127,16 +128,17 @@ async function checkActiveSession() {
             isRunning = true;
             currentSessionStart = new Date(data.session.start_time);
             updateButtonState();
-            // Get initial today time before starting live update
-            fetch('/api/sessions/today')
-                .then(response => response.json())
-                .then(todayData => {
-                    initialTodaySeconds = todayData.totalSeconds;
-                    startLiveUpdate();
-                })
-                .catch(error => {
-                    console.error('Error getting initial today time:', error);
-                });
+            // Get initial today and week time before starting live update
+            Promise.all([
+                fetch('/api/sessions/today').then(r => r.json()),
+                fetch('/api/sessions/week-total').then(r => r.json())
+            ]).then(([todayData, weekData]) => {
+                initialTodaySeconds = todayData.totalSeconds;
+                initialWeekSeconds = weekData.totalSeconds;
+                startLiveUpdate();
+            }).catch(error => {
+                console.error('Error getting initial times:', error);
+            });
         }
     } catch (error) {
         console.error('Error checking active session:', error);
@@ -151,10 +153,12 @@ function startLiveUpdate() {
         if (isRunning && currentSessionStart) {
             const now = new Date();
             const elapsed = Math.floor((now - currentSessionStart) / 1000);
-            const total = initialTodaySeconds + elapsed;
-            todayTime.textContent = formatTime(total);
-            updateTodayProgress(total);
-            updateWeekTotal();
+            const totalToday = initialTodaySeconds + elapsed;
+            const totalWeek = initialWeekSeconds + elapsed;
+            todayTime.textContent = formatTime(totalToday);
+            updateTodayProgress(totalToday);
+            weekTime.textContent = formatTime(totalWeek);
+            updateWeekProgress(totalWeek);
         }
     }, 1000);
 }
@@ -197,10 +201,14 @@ async function toggleSession() {
                 // Refresh initial data for live update
                 const todayResponse = await fetch('/api/sessions/today');
                 const todayData = await todayResponse.json();
+                const weekResponse = await fetch('/api/sessions/week-total');
+                const weekData = await weekResponse.json();
                 initialTodaySeconds = todayData.totalSeconds;
+                initialWeekSeconds = weekData.totalSeconds;
                 todayTime.textContent = formatTime(todayData.totalSeconds);
+                weekTime.textContent = formatTime(weekData.totalSeconds);
                 updateTodayProgress(todayData.totalSeconds);
-                updateWeekTotal();
+                updateWeekProgress(weekData.totalSeconds);
                 updateHistory();
                 updateChart();
             }
@@ -220,11 +228,15 @@ async function toggleSession() {
                 isRunning = true;
                 currentSessionStart = new Date();
                 updateButtonState();
-                // Get initial today time for live update
+                // Get initial today and week time for live update
                 const todayResponse = await fetch('/api/sessions/today');
                 const todayData = await todayResponse.json();
+                const weekResponse = await fetch('/api/sessions/week-total');
+                const weekData = await weekResponse.json();
                 initialTodaySeconds = todayData.totalSeconds;
+                initialWeekSeconds = weekData.totalSeconds;
                 updateTodayProgress(initialTodaySeconds);
+                updateWeekProgress(initialWeekSeconds);
                 startLiveUpdate();
             }
         } catch (error) {
