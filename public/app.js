@@ -98,10 +98,12 @@ async function updateHistory() {
             const time = formatTime(item.totalSeconds);
             const percentage = (item.totalSeconds / DAILY_TARGET) * 100;
             const progressClass = item.totalSeconds > DAILY_TARGET ? 'warning' : '';
+            const overflowSeconds = Math.max(0, item.totalSeconds - DAILY_TARGET);
+            const overflowText = overflowSeconds > 0 ? ` (+${formatTime(overflowSeconds)})` : '';
 
             historyItem.innerHTML = `
                 <div class="date">${date}</div>
-                <div class="time">${time}</div>
+                <div class="time">${time}${overflowText}</div>
                 <div class="day-name">${dayName}</div>
                 <div class="history-progress-container">
                     <div class="history-progress-bar-wrapper">
@@ -324,6 +326,16 @@ async function updateChart() {
 
         const labels = data.weeklyData.map(week => formatWeekRange(week.monday, week.sunday));
         const times = data.weeklyData.map(week => week.totalSeconds);
+        const overflows = data.weeklyData.map(week => week.overflowSeconds);
+        const isOver = data.weeklyData.map(week => week.isOver);
+
+        // Generate colors based on overflow
+        const backgroundColors = times.map((time, idx) => 
+            isOver[idx] ? 'rgba(255, 107, 107, 0.7)' : 'rgba(102, 126, 234, 0.7)'
+        );
+        const borderColors = times.map((time, idx) => 
+            isOver[idx] ? 'rgba(255, 107, 107, 1)' : 'rgba(102, 126, 234, 1)'
+        );
 
         weeklyChart = new Chart(ctx, {
             type: 'bar',
@@ -332,18 +344,8 @@ async function updateChart() {
                 datasets: [{
                     label: 'Heures travaillées',
                     data: times,
-                    backgroundColor: [
-                        'rgba(102, 126, 234, 0.7)',
-                        'rgba(118, 75, 162, 0.7)',
-                        'rgba(255, 107, 107, 0.7)',
-                        'rgba(238, 90, 36, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(102, 126, 234, 1)',
-                        'rgba(118, 75, 162, 1)',
-                        'rgba(255, 107, 107, 1)',
-                        'rgba(238, 90, 36, 1)'
-                    ],
+                    backgroundColor: backgroundColors,
+                    borderColor: borderColors,
                     borderWidth: 1
                 }]
             },
@@ -381,7 +383,11 @@ async function updateChart() {
                     display: true,
                     anchor: 'center',       // Centre le label dans la barre
                     align: 'center',        // Alignement centré
-                    formatter: function(value) {
+                    formatter: function(value, context) {
+                        const overflow = overflows[context.dataIndex] || 0;
+                        if (overflow > 0) {
+                            return formatTime(value) + '\n+' + formatTime(overflow);
+                        }
                         return formatTime(value);
                     },
                     color: '#fff',           // Blanc pour mieux contraster

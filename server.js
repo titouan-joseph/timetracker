@@ -256,6 +256,7 @@ app.get('/api/sessions/week-overflow', (req, res) => {
 // Get weekly data for the last 4 weeks
 app.get('/api/sessions/weekly-history', (req, res) => {
   const today = new Date();
+  const WEEKLY_TARGET = 38 * 3600 + 30 * 60; // 38h30 = 138600 seconds
   const weeks = [];
 
   // Get the last 4 weeks (Monday to Sunday) - oldest to newest
@@ -278,9 +279,21 @@ app.get('/api/sessions/weekly-history', (req, res) => {
       (err, row) => {
         if (err) {
           console.error('Error fetching weekly data:', err.message);
-          results[index] = { ...week, totalSeconds: 0 };
+          results[index] = { 
+            ...week, 
+            totalSeconds: 0,
+            overflowSeconds: 0,
+            isOver: false
+          };
         } else {
-          results[index] = { ...week, totalSeconds: row?.totalSeconds || 0 };
+          const totalSeconds = row?.totalSeconds || 0;
+          const overflowSeconds = Math.max(0, totalSeconds - WEEKLY_TARGET);
+          results[index] = { 
+            ...week, 
+            totalSeconds: totalSeconds,
+            overflowSeconds: overflowSeconds,
+            isOver: totalSeconds > WEEKLY_TARGET
+          };
         }
 
         completed++;
